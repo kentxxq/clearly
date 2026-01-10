@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import {
   searchHistory,
   deleteHistoryByUrls,
@@ -12,9 +12,10 @@ import {
   toggleAutoCleanRule,
   type CleanRule,
 } from '@/utils/storageService';
+import { getLogs, clearLogs, type LogEntry } from '@/utils/logService';
 
 // 当前标签页
-const activeTab = ref<'search' | 'settings'>('search');
+const activeTab = ref<'search' | 'settings' | 'logs'>('search');
 
 // 搜索相关状态
 const searchQuery = ref('');
@@ -26,6 +27,67 @@ const selectedUrls = ref<Set<string>>(new Set());
 const rules = ref<CleanRule[]>([]);
 const newRuleType = ref<'domain' | 'keyword'>('domain');
 const newRuleValue = ref('');
+
+// 日志相关状态
+const logs = ref<LogEntry[]>([]);
+const isLoadingLogs = ref(false);
+
+// 倒计时相关状态
+const nextCleanTime = ref<number | null>(null);
+const countdown = ref('');
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+// 获取下次清理时间
+async function loadNextCleanTime() {
+  try {
+    const alarm = await browser.alarms.get('auto-clean-history');
+    if (alarm) {
+      nextCleanTime.value = alarm.scheduledTime;
+    }
+  } catch (error) {
+    console.error('获取定时器信息失败:', error);
+  }
+}
+
+// 更新倒计时显示
+function updateCountdown() {
+  if (!nextCleanTime.value) {
+    countdown.value = '未设置';
+    return;
+  }
+  
+  const now = Date.now();
+  const diff = nextCleanTime.value - now;
+  
+  if (diff <= 0) {
+    countdown.value = '正在执行...';
+    // 重新获取下次时间
+    loadNextCleanTime();
+    return;
+  }
+  
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  
+  countdown.value = `${minutes}分${remainingSeconds.toString().padStart(2, '0')}秒`;
+}
+
+// 启动倒计时定时器
+function startCountdownTimer() {
+  // 立即更新一次
+  updateCountdown();
+  // 每秒更新
+  countdownTimer = setInterval(updateCountdown, 1000);
+}
+
+// 停止倒计时定时器
+function stopCountdownTimer() {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+}
 
 // 搜索历史记录
 async function handleSearch() {
@@ -122,6 +184,30 @@ async function handleToggleRule(id: string) {
   await loadRules();
 }
 
+// 加载日志
+async function loadLogs() {
+  isLoadingLogs.value = true;
+  try {
+    logs.value = await getLogs();
+  } catch (error) {
+    console.error('加载日志失败:', error);
+  } finally {
+    isLoadingLogs.value = false;
+  }
+}
+
+// 清空日志
+async function handleClearLogs() {
+  await clearLogs();
+  logs.value = [];
+}
+
+// 判断是否是新的清理周期开始（用于显示分隔线）
+// 日志是倒序显示的，"自动清理完成"在视觉上是每个周期的第一条
+function isNewCycleStart(logMessage: string): boolean {
+  return logMessage.includes('自动清理完成') || logMessage.includes('没有匹配的记录需要清理');
+}
+
 // 格式化时间
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleString('zh-CN');
@@ -132,8 +218,40 @@ function truncateUrl(url: string, maxLength: number = 50): string {
   return url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
 }
 
+// 获取日志类型图标
+function getLogIcon(type: LogEntry['type']): string {
+  switch (type) {
+    case 'success': return '✅';
+    case 'error': return '❌';
+    case 'warning': return '⚠️';
+    default: return 'ℹ️';
+  }
+}
+
+// 存储变化监听器
+function handleStorageChange(changes: Record<string, any>) {
+  // 当日志存储发生变化时，自动刷新日志列表
+  if ('clearly_logs' in changes) {
+    loadLogs();
+  }
+}
+
 onMounted(() => {
   loadRules();
+  // 初始加载日志
+  loadLogs();
+  // 加载下次清理时间并启动倒计时
+  loadNextCleanTime().then(() => {
+    startCountdownTimer();
+  });
+  // 监听存储变化，实现日志自动刷新
+  browser.storage.onChanged.addListener(handleStorageChange);
+});
+
+// 组件卸载时移除监听器
+onUnmounted(() => {
+  browser.storage.onChanged.removeListener(handleStorageChange);
+  stopCountdownTimer();
 });
 </script>
 
@@ -141,7 +259,7 @@ onMounted(() => {
   <div class="container">
     <!-- 标题栏 -->
     <header class="header">
-      <h1>🧹 历史记录清理</h1>
+      <h1>✨ Clearly</h1>
     </header>
 
     <!-- 标签页切换 -->
@@ -150,13 +268,19 @@ onMounted(() => {
         :class="['tab-btn', { active: activeTab === 'search' }]"
         @click="activeTab = 'search'"
       >
-        🔍 搜索清理
+        🔍 搜索
       </button>
       <button
         :class="['tab-btn', { active: activeTab === 'settings' }]"
         @click="activeTab = 'settings'"
       >
-        ⚙️ 自动清理
+        ⚙️ 规则
+      </button>
+      <button
+        :class="['tab-btn', { active: activeTab === 'logs' }]"
+        @click="activeTab = 'logs'; loadLogs()"
+      >
+        📋 日志
       </button>
     </nav>
 
@@ -269,6 +393,49 @@ onMounted(() => {
       <div v-else class="empty-state">
         <p>暂无自动清理规则</p>
       </div>
+    </div>
+
+    <!-- 日志面板 -->
+    <div v-if="activeTab === 'logs'" class="panel">
+      <!-- 日志操作栏 -->
+      <div class="logs-header">
+        <span class="logs-count">共 {{ logs.length }} 条日志</span>
+        <button class="btn-clear" @click="handleClearLogs" :disabled="logs.length === 0">
+          🗑️ 清空日志
+        </button>
+      </div>
+
+      <!-- 加载状态 -->
+      <div v-if="isLoadingLogs" class="loading">加载中...</div>
+
+      <!-- 日志列表 -->
+      <ul v-else class="logs-list">
+        <!-- 下次清理倒计时（始终显示在最上方） -->
+        <li class="cycle-divider next-clean">
+          <span class="cycle-label">⏱️ 下次清理 · {{ countdown }}</span>
+        </li>
+        
+        <template v-for="(log, index) in logs" :key="log.id">
+          <!-- 清理周期分隔线 -->
+          <li v-if="isNewCycleStart(log.message)" class="cycle-divider">
+            <span class="cycle-label">🔄 清理周期 · {{ formatTime(log.timestamp) }}</span>
+          </li>
+          <!-- 日志项 -->
+          <li :class="['log-item', log.type]">
+            <div class="log-icon">{{ getLogIcon(log.type) }}</div>
+            <div class="log-content">
+              <div class="log-message">{{ log.message }}</div>
+              <div v-if="log.details" class="log-details">{{ log.details }}</div>
+              <div class="log-time">{{ formatTime(log.timestamp) }}</div>
+            </div>
+          </li>
+        </template>
+        
+        <!-- 空日志提示 -->
+        <li v-if="logs.length === 0" class="empty-hint">
+          <p>暂无运行日志</p>
+        </li>
+      </ul>
     </div>
   </div>
 </template>
@@ -548,5 +715,154 @@ onMounted(() => {
   cursor: pointer;
   background: #fee2e2;
   color: #991b1b;
+}
+
+/* 日志面板样式 */
+.logs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--action-bar-bg, #f8f8f8);
+  border-radius: 8px;
+}
+
+.logs-count {
+  font-size: 13px;
+  color: #666;
+}
+
+.btn-clear {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  background: #fee2e2;
+  color: #991b1b;
+  transition: opacity 0.2s;
+}
+
+.btn-clear:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btn-clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.logs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.log-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #f9fafb;
+  border-left: 3px solid #94a3b8;
+}
+
+.log-item.success {
+  background: #f0fdf4;
+  border-left-color: #22c55e;
+}
+
+.log-item.error {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+}
+
+.log-item.warning {
+  background: #fffbeb;
+  border-left-color: #f59e0b;
+}
+
+.log-item.info {
+  background: #eff6ff;
+  border-left-color: #3b82f6;
+}
+
+.log-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.log-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-message {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f2937;
+  word-break: break-word;
+}
+
+.log-details {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.log-time {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* 清理周期分隔线 */
+.cycle-divider {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  margin: 8px 0;
+}
+
+.cycle-divider::before,
+.cycle-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #14b8a6, transparent);
+}
+
+.cycle-label {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  background: linear-gradient(135deg, #ccfbf1, #a5f3fc);
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* 下次清理倒计时样式 */
+.cycle-divider.next-clean::before,
+.cycle-divider.next-clean::after {
+  background: linear-gradient(to right, transparent, #f59e0b, transparent);
+}
+
+.cycle-divider.next-clean .cycle-label {
+  color: #92400e;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 空日志提示 */
+.empty-hint {
+  text-align: center;
+  padding: 30px;
+  color: #9ca3af;
+  font-size: 13px;
 }
 </style>
