@@ -1,0 +1,9 @@
+Clearly is a robust and user-friendly browser extension dedicated to maintaining your online privacy and keeping your browsing history tidy. 
+
+It empowers you with sophisticated search capabilities for precise manual history management, while also featuring a powerful automation engine. 
+
+You can effortlessly create custom rules to automatically remove history records based on specific domains or keywords. 
+
+With a built-in scheduler that initiates cleaning every minute and a detailed activity log for transparency, Clearly ensures your browsing data is handled exactly the way you want it. 
+
+Experience a cleaner, faster, and more private web with Clearly.
