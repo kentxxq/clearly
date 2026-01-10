@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+vars:
+  GREETING: Hello, world!
+
+tasks:
+  publish:
+    cmds:
+      - task: zip-chrome
+      - task: zip-edge
+    silent: true
+
+  zip-chrome:
+    cmds:
+      - pnpm zip -b chrome
+    silent: true
+
+  zip-edge:
+    cmds:
+      - pnpm zip -b edge
+    silent: true
