@@ -13,6 +13,17 @@ import {
   type CleanRule,
 } from '@/utils/storageService';
 import { getLogs, clearLogs, type LogEntry } from '@/utils/logService';
+import {
+  t,
+  getCurrentLanguage,
+  setCurrentLanguage,
+  getStoredLanguage,
+  setStoredLanguage,
+  type Language,
+} from '@/utils/i18n';
+
+// 当前语言
+const currentLang = ref<Language>('zh');
 
 // 当前标签页
 const activeTab = ref<'search' | 'settings' | 'logs'>('search');
@@ -37,6 +48,26 @@ const nextCleanTime = ref<number | null>(null);
 const countdown = ref('');
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
+// 多语言包装函数，确保响应式更新
+const i18n = computed(() => ({
+  lang: currentLang.value,
+}));
+
+// 翻译函数包装（触发响应式） 
+function tr(key: Parameters<typeof t>[0], params?: Record<string, string | number>): string {
+  // 依赖 i18n.value.lang 确保语言切换时重新计算
+  const _ = i18n.value.lang;
+  return t(key, params);
+}
+
+// 切换语言
+async function toggleLanguage() {
+  const newLang: Language = currentLang.value === 'zh' ? 'en' : 'zh';
+  currentLang.value = newLang;
+  setCurrentLanguage(newLang);
+  await setStoredLanguage(newLang);
+}
+
 // 获取下次清理时间
 async function loadNextCleanTime() {
   try {
@@ -52,7 +83,7 @@ async function loadNextCleanTime() {
 // 更新倒计时显示
 function updateCountdown() {
   if (!nextCleanTime.value) {
-    countdown.value = '未设置';
+    countdown.value = tr('notSet');
     return;
   }
   
@@ -60,7 +91,7 @@ function updateCountdown() {
   const diff = nextCleanTime.value - now;
   
   if (diff <= 0) {
-    countdown.value = '正在执行...';
+    countdown.value = tr('executing');
     // 重新获取下次时间
     loadNextCleanTime();
     return;
@@ -70,7 +101,7 @@ function updateCountdown() {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   
-  countdown.value = `${minutes}分${remainingSeconds.toString().padStart(2, '0')}秒`;
+  countdown.value = `${minutes}${tr('minutes')}${remainingSeconds.toString().padStart(2, '0')}${tr('seconds')}`;
 }
 
 // 启动倒计时定时器
@@ -145,10 +176,10 @@ async function deleteSelected() {
       (item) => !selectedUrls.value.has(item.url)
     );
     selectedUrls.value.clear();
-    alert(`成功删除 ${deleted} 条记录`);
+    alert(tr('deleteSuccess', { count: deleted }));
   } catch (error) {
     console.error('删除失败:', error);
-    alert('删除失败，请重试');
+    alert(tr('deleteFailed'));
   } finally {
     isLoading.value = false;
   }
@@ -168,7 +199,7 @@ async function handleAddRule() {
     newRuleValue.value = '';
     await loadRules();
   } catch (error: any) {
-    alert(error.message || '添加失败');
+    alert(error.message || 'Failed to add rule');
   }
 }
 
@@ -204,13 +235,32 @@ async function handleClearLogs() {
 
 // 判断是否是新的清理周期开始（用于显示分隔线）
 // 日志是倒序显示的，"自动清理完成"在视觉上是每个周期的第一条
-function isNewCycleStart(logMessage: string): boolean {
-  return logMessage.includes('自动清理完成') || logMessage.includes('没有匹配的记录需要清理');
+function isNewCycleStart(log: LogEntry): boolean {
+  return log.messageKey === 'logCleanDone' || log.messageKey === 'logNoMatch';
+}
+
+// 获取日志消息（支持国际化）
+function getLogMessage(log: LogEntry): string {
+  // 触发响应式
+  const _ = i18n.value.lang;
+  return t(log.messageKey, log.messageParams);
+}
+
+// 获取日志详情（支持国际化）
+function getLogDetails(log: LogEntry): string | undefined {
+  // 触发响应式
+  const _ = i18n.value.lang;
+  
+  if (log.detailsKey) {
+    return t(log.detailsKey, log.detailsParams);
+  }
+  return undefined;
 }
 
 // 格式化时间
 function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleString('zh-CN');
+  const locale = currentLang.value === 'zh' ? 'zh-CN' : 'en-US';
+  return new Date(timestamp).toLocaleString(locale);
 }
 
 // 截断URL显示
@@ -236,7 +286,12 @@ function handleStorageChange(changes: Record<string, any>) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 加载语言设置
+  const lang = await getStoredLanguage();
+  currentLang.value = lang;
+  setCurrentLanguage(lang);
+  
   loadRules();
   // 初始加载日志
   loadLogs();
@@ -259,7 +314,11 @@ onUnmounted(() => {
   <div class="container">
     <!-- 标题栏 -->
     <header class="header">
-      <h1>✨ Clearly</h1>
+      <h1>{{ tr('appName') }}</h1>
+      <!-- 语言切换按钮 -->
+      <button class="lang-toggle" @click="toggleLanguage" :title="currentLang === 'zh' ? 'Switch to English' : '切换到中文'">
+        {{ tr('switchLanguage') }}
+      </button>
     </header>
 
     <!-- 标签页切换 -->
@@ -268,19 +327,19 @@ onUnmounted(() => {
         :class="['tab-btn', { active: activeTab === 'search' }]"
         @click="activeTab = 'search'"
       >
-        🔍 搜索
+        {{ tr('tabSearch') }}
       </button>
       <button
         :class="['tab-btn', { active: activeTab === 'settings' }]"
         @click="activeTab = 'settings'"
       >
-        ⚙️ 规则
+        {{ tr('tabRules') }}
       </button>
       <button
         :class="['tab-btn', { active: activeTab === 'logs' }]"
         @click="activeTab = 'logs'; loadLogs()"
       >
-        📋 日志
+        {{ tr('tabLogs') }}
       </button>
     </nav>
 
@@ -291,11 +350,11 @@ onUnmounted(() => {
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="输入域名或关键词搜索..."
+          :placeholder="tr('searchPlaceholder')"
           @keyup.enter="handleSearch"
         />
         <button class="btn-primary" @click="handleSearch" :disabled="isLoading">
-          搜索
+          {{ tr('searchBtn') }}
         </button>
       </div>
 
@@ -307,19 +366,19 @@ onUnmounted(() => {
             :checked="isAllSelected"
             @change="toggleSelectAll"
           />
-          全选 ({{ selectedUrls.size }}/{{ historyItems.length }})
+          {{ tr('selectAll') }} ({{ selectedUrls.size }}/{{ historyItems.length }})
         </label>
         <button
           class="btn-danger"
           @click="deleteSelected"
           :disabled="selectedUrls.size === 0 || isLoading"
         >
-          🗑️ 删除选中 ({{ selectedUrls.size }})
+          {{ tr('deleteSelected') }} ({{ selectedUrls.size }})
         </button>
       </div>
 
       <!-- 加载状态 -->
-      <div v-if="isLoading" class="loading">加载中...</div>
+      <div v-if="isLoading" class="loading">{{ tr('loading') }}</div>
 
       <!-- 历史记录列表 -->
       <ul v-else-if="historyItems.length > 0" class="history-list">
@@ -333,7 +392,7 @@ onUnmounted(() => {
             <div class="item-title">{{ item.title }}</div>
             <div class="item-url">{{ truncateUrl(item.url) }}</div>
             <div class="item-meta">
-              {{ formatTime(item.lastVisitTime) }} · 访问 {{ item.visitCount }} 次
+              {{ formatTime(item.lastVisitTime) }} · {{ tr('visit') }} {{ item.visitCount }} {{ tr('times') }}
             </div>
           </div>
         </li>
@@ -341,29 +400,29 @@ onUnmounted(() => {
 
       <!-- 空状态 -->
       <div v-else class="empty-state">
-        <p>输入关键词搜索浏览历史</p>
+        <p>{{ tr('emptySearchHint') }}</p>
       </div>
     </div>
 
     <!-- 自动清理设置面板 -->
     <div v-if="activeTab === 'settings'" class="panel">
       <p class="settings-desc">
-        添加域名或关键词规则，插件将每 1 分钟自动清理匹配的历史记录。
+        {{ tr('settingsDesc') }}
       </p>
 
       <!-- 添加规则表单 -->
       <div class="add-rule-form">
         <select v-model="newRuleType">
-          <option value="domain">域名</option>
-          <option value="keyword">关键词</option>
+          <option value="domain">{{ tr('typeDomain') }}</option>
+          <option value="keyword">{{ tr('typeKeyword') }}</option>
         </select>
         <input
           v-model="newRuleValue"
           type="text"
-          :placeholder="newRuleType === 'domain' ? '例如: example.com' : '例如: 购物'"
+          :placeholder="newRuleType === 'domain' ? tr('domainPlaceholder') : tr('keywordPlaceholder')"
           @keyup.enter="handleAddRule"
         />
-        <button class="btn-primary" @click="handleAddRule">添加</button>
+        <button class="btn-primary" @click="handleAddRule">{{ tr('addBtn') }}</button>
       </div>
 
       <!-- 规则列表 -->
@@ -371,7 +430,7 @@ onUnmounted(() => {
         <li v-for="rule in rules" :key="rule.id" class="rule-item">
           <div class="rule-info">
             <span :class="['rule-type', rule.type]">
-              {{ rule.type === 'domain' ? '域名' : '关键词' }}
+              {{ rule.type === 'domain' ? tr('typeDomain') : tr('typeKeyword') }}
             </span>
             <span class="rule-value">{{ rule.value }}</span>
           </div>
@@ -380,10 +439,10 @@ onUnmounted(() => {
               :class="['btn-toggle', { enabled: rule.enabled }]"
               @click="handleToggleRule(rule.id)"
             >
-              {{ rule.enabled ? '已启用' : '已禁用' }}
+              {{ rule.enabled ? tr('enabled') : tr('disabled') }}
             </button>
             <button class="btn-delete" @click="handleRemoveRule(rule.id)">
-              删除
+              {{ tr('deleteBtn') }}
             </button>
           </div>
         </li>
@@ -391,7 +450,7 @@ onUnmounted(() => {
 
       <!-- 空规则状态 -->
       <div v-else class="empty-state">
-        <p>暂无自动清理规则</p>
+        <p>{{ tr('emptyRulesHint') }}</p>
       </div>
     </div>
 
@@ -399,33 +458,33 @@ onUnmounted(() => {
     <div v-if="activeTab === 'logs'" class="panel">
       <!-- 日志操作栏 -->
       <div class="logs-header">
-        <span class="logs-count">共 {{ logs.length }} 条日志</span>
+        <span class="logs-count">{{ tr('logsCount', { count: logs.length }) }}</span>
         <button class="btn-clear" @click="handleClearLogs" :disabled="logs.length === 0">
-          🗑️ 清空日志
+          {{ tr('clearLogs') }}
         </button>
       </div>
 
       <!-- 加载状态 -->
-      <div v-if="isLoadingLogs" class="loading">加载中...</div>
+      <div v-if="isLoadingLogs" class="loading">{{ tr('loading') }}</div>
 
       <!-- 日志列表 -->
       <ul v-else class="logs-list">
         <!-- 下次清理倒计时（始终显示在最上方） -->
         <li class="cycle-divider next-clean">
-          <span class="cycle-label">⏱️ 下次清理 · {{ countdown }}</span>
+          <span class="cycle-label">{{ tr('nextClean') }} · {{ countdown }}</span>
         </li>
         
         <template v-for="(log, index) in logs" :key="log.id">
           <!-- 清理周期分隔线 -->
-          <li v-if="isNewCycleStart(log.message)" class="cycle-divider">
-            <span class="cycle-label">🔄 清理周期 · {{ formatTime(log.timestamp) }}</span>
+          <li v-if="isNewCycleStart(log)" class="cycle-divider">
+            <span class="cycle-label">{{ tr('cleanCycle') }} · {{ formatTime(log.timestamp) }}</span>
           </li>
           <!-- 日志项 -->
           <li :class="['log-item', log.type]">
             <div class="log-icon">{{ getLogIcon(log.type) }}</div>
             <div class="log-content">
-              <div class="log-message">{{ log.message }}</div>
-              <div v-if="log.details" class="log-details">{{ log.details }}</div>
+              <div class="log-message">{{ getLogMessage(log) }}</div>
+              <div v-if="getLogDetails(log)" class="log-details">{{ getLogDetails(log) }}</div>
               <div class="log-time">{{ formatTime(log.timestamp) }}</div>
             </div>
           </li>
@@ -433,7 +492,7 @@ onUnmounted(() => {
         
         <!-- 空日志提示 -->
         <li v-if="logs.length === 0" class="empty-hint">
-          <p>暂无运行日志</p>
+          <p>{{ tr('emptyLogsHint') }}</p>
         </li>
       </ul>
     </div>
@@ -448,13 +507,32 @@ onUnmounted(() => {
 }
 
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
 }
 
 .header h1 {
   font-size: 20px;
   margin: 0;
-  text-align: center;
+}
+
+.lang-toggle {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lang-toggle:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
 }
 
 .tabs {

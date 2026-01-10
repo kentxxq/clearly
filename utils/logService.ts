@@ -1,12 +1,17 @@
 // 日志服务 - 用于保存和管理清理日志
 // Log service for saving and managing cleaning logs
 
+import { type TranslationKey } from './i18n';
+
 export interface LogEntry {
     id: string;
     timestamp: number;
     type: 'info' | 'success' | 'warning' | 'error';
-    message: string;
-    details?: string;
+    // 国际化支持：存储翻译 key 和参数，显示时再翻译
+    messageKey: TranslationKey;
+    messageParams?: Record<string, string | number>;
+    detailsKey?: TranslationKey;
+    detailsParams?: Record<string, string | number>;
 }
 
 // 存储 key
@@ -29,8 +34,10 @@ export async function getLogs(): Promise<LogEntry[]> {
 // 添加日志
 export async function addLog(
     type: LogEntry['type'],
-    message: string,
-    details?: string
+    messageKey: TranslationKey,
+    messageParams?: Record<string, string | number>,
+    detailsKey?: TranslationKey,
+    detailsParams?: Record<string, string | number>
 ): Promise<void> {
     const logs = await getLogs();
 
@@ -38,14 +45,14 @@ export async function addLog(
         id: generateId(),
         timestamp: Date.now(),
         type,
-        message,
-        details,
+        messageKey,
+        messageParams,
+        detailsKey,
+        detailsParams,
     };
 
-    // 添加新日志到开头
     logs.unshift(newLog);
 
-    // 保持最大条数限制
     if (logs.length > MAX_LOG_COUNT) {
         logs.splice(MAX_LOG_COUNT);
     }
@@ -58,10 +65,33 @@ export async function clearLogs(): Promise<void> {
     await browser.storage.local.set({ [LOG_STORAGE_KEY]: [] });
 }
 
-// 快捷方法
+// 日志快捷方法
 export const log = {
-    info: (message: string, details?: string) => addLog('info', message, details),
-    success: (message: string, details?: string) => addLog('success', message, details),
-    warning: (message: string, details?: string) => addLog('warning', message, details),
-    error: (message: string, details?: string) => addLog('error', message, details),
+    info: (
+        messageKey: TranslationKey,
+        messageParams?: Record<string, string | number>,
+        detailsKey?: TranslationKey,
+        detailsParams?: Record<string, string | number>
+    ) => addLog('info', messageKey, messageParams, detailsKey, detailsParams),
+
+    success: (
+        messageKey: TranslationKey,
+        messageParams?: Record<string, string | number>,
+        detailsKey?: TranslationKey,
+        detailsParams?: Record<string, string | number>
+    ) => addLog('success', messageKey, messageParams, detailsKey, detailsParams),
+
+    warning: (
+        messageKey: TranslationKey,
+        messageParams?: Record<string, string | number>,
+        detailsKey?: TranslationKey,
+        detailsParams?: Record<string, string | number>
+    ) => addLog('warning', messageKey, messageParams, detailsKey, detailsParams),
+
+    error: (
+        messageKey: TranslationKey,
+        messageParams?: Record<string, string | number>,
+        detailsKey?: TranslationKey,
+        detailsParams?: Record<string, string | number>
+    ) => addLog('error', messageKey, messageParams, detailsKey, detailsParams),
 };

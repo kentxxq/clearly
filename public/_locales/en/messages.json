@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "Clearly - History Cleaner",
+        "description": "Extension name"
+    },
+    "extension_description": {
+        "message": "Keep your browsing history clean with search filtering and automatic scheduled cleaning",
+        "description": "Extension description"
+    }
+}

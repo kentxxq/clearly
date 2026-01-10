@@ -1,0 +1,10 @@
+{
+    "extension_name": {
+        "message": "Clearly - 浏览记录清理",
+        "description": "Extension name"
+    },
+    "extension_description": {
+        "message": "让浏览历史保持清爽，支持搜索过滤和自动定时清理",
+        "description": "Extension description"
+    }
+}

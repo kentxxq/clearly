@@ -4,8 +4,10 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-vue'],
   manifest: {
-    name: 'Clearly - 浏览记录清理',
-    description: '让浏览历史保持清爽，支持搜索过滤和自动定时清理',
+    name: '__MSG_extension_name__',
+    description: '__MSG_extension_description__',
     permissions: ['history', 'storage', 'alarms'],
+    default_locale: 'en',
   },
 });
+
