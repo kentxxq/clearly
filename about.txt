@@ -6,4 +6,20 @@ You can effortlessly create custom rules to automatically remove history records
 
 With a built-in scheduler that initiates cleaning every minute and a detailed activity log for transparency, Clearly ensures your browsing data is handled exactly the way you want it. 
 
+We are committed to continuous improvement and will regularly release updates with new features and optimizations to enhance your experience.
+
 Experience a cleaner, faster, and more private web with Clearly.
+
+---
+
+Clearly 是一款功能强大且易于使用的浏览器扩展，致力于保护您的在线隐私并保持浏览历史整洁。
+
+它为您提供高级搜索功能，方便进行精确的历史记录手动管理，同时还配备了强大的自动化引擎。
+
+您可以轻松创建自定义规则，根据特定的域名或关键字自动删除历史记录。
+
+借助内置的调度程序（每分钟执行一次清理）和透明的详细活动日志，Clearly 确保您的浏览记录完全按照您期望的方式进行处理。
+
+我们致力于持续迭代和优化，将定期发布更新以带来更多实用功能，不断改进您的使用体验。
+
+使用 Clearly，体验更整洁、更快速、更私密的网络环境。
