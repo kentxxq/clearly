@@ -87,15 +87,20 @@ async function setupAlarm() {
   }
 }
 
-export default defineBackground(async () => {
+export default defineBackground(() => {
+  // 重要：MV3 Service Worker 要求事件监听器必须同步注册！
+  // 不能在 async 函数中注册，否则 Service Worker 重启时可能错过事件
+
   const now = new Date().toLocaleString();
   console.log('[Clearly] 后台脚本已启动', now);
-  await log.info('logBgStarted', { time: now });
 
-  // 设置定时器
+  // 异步日志记录不阻塞主流程
+  log.info('logBgStarted', { time: now });
+
+  // 设置定时器（不等待完成）
   setupAlarm();
 
-  // 监听定时器事件
+  // 监听定时器事件 - 必须同步注册！
   browser.alarms.onAlarm.addListener((alarm) => {
     console.log('[Clearly] 收到定时器事件:', alarm.name, new Date().toLocaleString());
     if (alarm.name === ALARM_NAME) {
@@ -103,18 +108,18 @@ export default defineBackground(async () => {
     }
   });
 
-  // 扩展安装或更新时
-  browser.runtime.onInstalled.addListener(async (details) => {
+  // 扩展安装或更新时 - 必须同步注册！
+  browser.runtime.onInstalled.addListener((details) => {
     console.log('[Clearly] 扩展已安装/更新', details.reason);
-    await log.info('logInstalled', undefined, 'logReason', { reason: details.reason });
+    log.info('logInstalled', undefined, 'logReason', { reason: details.reason });
 
     // 重新设置定时器
     setupAlarm();
 
     // 延迟 2 秒执行一次清理，确保存储已初始化
-    setTimeout(async () => {
+    setTimeout(() => {
       console.log('[Clearly] 安装后立即执行一次清理...');
-      await log.info('logInstallClean');
+      log.info('logInstallClean');
       executeAutoClean();
     }, 2000);
   });
