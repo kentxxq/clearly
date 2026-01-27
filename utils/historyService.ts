@@ -43,6 +43,24 @@ export async function deleteHistoryByUrls(urls: string[]): Promise<number> {
     return deletedCount;
 }
 
+// 精确子域名匹配
+// 规则 "baidu.com" 匹配 "baidu.com" 和 "*.baidu.com"
+// 但不会误匹配 "fakebaidu.com" 或 "baidu.com.cn"
+function isSubdomainMatch(hostname: string, domain: string): boolean {
+    // 统一转为小写进行比较
+    const h = hostname.toLowerCase();
+    const d = domain.toLowerCase();
+
+    // 完全相等
+    if (h === d) return true;
+
+    // 子域名匹配：hostname 以 ".domain" 结尾
+    // 例如 "www.baidu.com" 以 ".baidu.com" 结尾
+    if (h.endsWith('.' + d)) return true;
+
+    return false;
+}
+
 // 根据域名匹配删除历史记录
 export async function deleteHistoryByDomain(domain: string): Promise<number> {
     const items = await searchHistory(domain);
@@ -50,9 +68,10 @@ export async function deleteHistoryByDomain(domain: string): Promise<number> {
         .filter((item) => {
             try {
                 const url = new URL(item.url);
-                return url.hostname.includes(domain);
+                return isSubdomainMatch(url.hostname, domain);
             } catch {
-                return item.url.includes(domain);
+                // URL 解析失败时，回退到简单包含匹配
+                return item.url.toLowerCase().includes(domain.toLowerCase());
             }
         })
         .map((item) => item.url);
