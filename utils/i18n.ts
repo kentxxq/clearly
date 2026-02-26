@@ -16,8 +16,8 @@ export const translations = {
 
     // 标签页
     tabSearch: {
-        zh: '🔍 搜索',
-        en: '🔍 Search',
+        zh: '📜 历史',
+        en: '📜 History',
     },
     tabRules: {
         zh: '⚙️ 规则',
@@ -30,8 +30,8 @@ export const translations = {
 
     // 搜索面板
     searchPlaceholder: {
-        zh: '输入域名或关键词搜索...',
-        en: 'Enter domain or keyword...',
+        zh: '搜索历史记录...',
+        en: 'Search history...',
     },
     searchBtn: {
         zh: '搜索',
@@ -50,8 +50,8 @@ export const translations = {
         en: 'Loading...',
     },
     emptySearchHint: {
-        zh: '输入关键词搜索浏览历史',
-        en: 'Enter keywords to search history',
+        zh: '暂无历史记录',
+        en: 'No history records',
     },
     visit: {
         zh: '访问',
@@ -68,6 +68,44 @@ export const translations = {
     deleteFailed: {
         zh: '删除失败，请重试',
         en: 'Delete failed, please retry',
+    },
+
+    // 快捷清理
+    quickClean: {
+        zh: '⚡ 快捷清理',
+        en: '⚡ Quick Clean',
+    },
+    cleanLastHour: {
+        zh: '最近 1 小时',
+        en: 'Last 1 Hour',
+    },
+    cleanLast3Hours: {
+        zh: '最近 3 小时',
+        en: 'Last 3 Hours',
+    },
+    cleanLastDay: {
+        zh: '最近 1 天',
+        en: 'Last 1 Day',
+    },
+    confirmClean: {
+        zh: '确定要清理{range}的所有历史记录吗？此操作不可撤销。',
+        en: 'Are you sure you want to clean all history from {range}? This action cannot be undone.',
+    },
+    quickCleanSuccess: {
+        zh: '快捷清理完成：{range}，共清理 {count} 条记录',
+        en: 'Quick clean done: {range}, cleaned {count} records',
+    },
+    quickCleanFailed: {
+        zh: '快捷清理失败',
+        en: 'Quick clean failed',
+    },
+    manualDeleteSuccess: {
+        zh: '手动删除了 {count} 条选中的记录',
+        en: 'Manually deleted {count} selected records',
+    },
+    manualDeleteFailed: {
+        zh: '手动删除选中记录失败',
+        en: 'Failed to manually delete selected records',
     },
 
     // 规则设置面板
@@ -264,7 +302,7 @@ export function t(key: TranslationKey, params?: Record<string, string | number>)
         return key;
     }
 
-    let text = translation[currentLanguage] || translation['zh'];
+    let text: string = translation[currentLanguage] || translation['zh'];
 
     // 替换参数，例如 {count} -> 实际值
     if (params) {
@@ -284,7 +322,7 @@ export function tWithLang(lang: Language, key: TranslationKey, params?: Record<s
         return key;
     }
 
-    let text = translation[lang] || translation['zh'];
+    let text: string = translation[lang] || translation['zh'];
 
     if (params) {
         for (const [paramKey, paramValue] of Object.entries(params)) {

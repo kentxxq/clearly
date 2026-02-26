@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import {
   searchHistory,
   deleteHistoryByUrls,
+  getRecentHistory,
+  deleteHistoryByTimeRange,
   type HistoryItem,
 } from '@/utils/historyService';
 import {
@@ -12,7 +14,7 @@ import {
   toggleAutoCleanRule,
   type CleanRule,
 } from '@/utils/storageService';
-import { getLogs, clearLogs, type LogEntry } from '@/utils/logService';
+import { getLogs, clearLogs, log, type LogEntry } from '@/utils/logService';
 import {
   t,
   getCurrentLanguage,
@@ -33,6 +35,25 @@ const searchQuery = ref('');
 const historyItems = ref<HistoryItem[]>([]);
 const isLoading = ref(false);
 const selectedUrls = ref<Set<string>>(new Set());
+const isQuickCleaning = ref(false);
+
+// Toast 相关状态
+const toastMessage = ref('');
+const toastType = ref<'success' | 'error'>('success');
+const toastVisible = ref(false);
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+// 显示 Toast 提示
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  // 清除上一个定时器
+  if (toastTimer) clearTimeout(toastTimer);
+  toastMessage.value = message;
+  toastType.value = type;
+  toastVisible.value = true;
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false;
+  }, 2500);
+}
 
 // 设置相关状态
 const rules = ref<CleanRule[]>([]);
@@ -120,18 +141,66 @@ function stopCountdownTimer() {
   }
 }
 
-// 搜索历史记录
-async function handleSearch() {
-  if (!searchQuery.value.trim()) return;
-
+// 加载最近历史记录
+async function loadRecentHistory() {
   isLoading.value = true;
   try {
-    historyItems.value = await searchHistory(searchQuery.value.trim());
-    selectedUrls.value = new Set(); // 清空选择
+    historyItems.value = await getRecentHistory();
+    selectedUrls.value = new Set();
+  } catch (error) {
+    console.error('加载历史记录失败:', error);
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+// 搜索历史记录
+async function handleSearch() {
+  isLoading.value = true;
+  try {
+    if (!searchQuery.value.trim()) {
+      // 空查询加载最近历史
+      historyItems.value = await getRecentHistory();
+    } else {
+      historyItems.value = await searchHistory(searchQuery.value.trim());
+    }
+    selectedUrls.value = new Set();
   } catch (error) {
     console.error('搜索失败:', error);
   } finally {
     isLoading.value = false;
+  }
+}
+
+// 快捷清理：按时间范围清理历史记录
+async function handleQuickClean(hours: number) {
+  // 获取时间范围文案
+  let rangeKey: 'cleanLastHour' | 'cleanLast3Hours' | 'cleanLastDay';
+  if (hours === 1) rangeKey = 'cleanLastHour';
+  else if (hours === 3) rangeKey = 'cleanLast3Hours';
+  else rangeKey = 'cleanLastDay';
+
+  const rangeText = tr(rangeKey);
+
+  isQuickCleaning.value = true;
+  try {
+    const startTime = Date.now() - hours * 60 * 60 * 1000;
+    const count = await deleteHistoryByTimeRange(startTime);
+    const now = new Date().toLocaleString();
+
+    // 记录到日志
+    await log.success('quickCleanSuccess', { range: rangeText, count });
+
+    showToast(tr('deleteSuccess', { count }), 'success');
+
+    // 刷新历史列表
+    await loadRecentHistory();
+  } catch (error) {
+    console.error('快捷清理失败:', error);
+    await log.error('quickCleanFailed', { error: String(error) });
+    showToast(tr('deleteFailed'), 'error');
+  } finally {
+    isQuickCleaning.value = false;
   }
 }
 
@@ -176,10 +245,13 @@ async function deleteSelected() {
       (item) => !selectedUrls.value.has(item.url)
     );
     selectedUrls.value.clear();
-    alert(tr('deleteSuccess', { count: deleted }));
+    // 记录到日志
+    await log.success('manualDeleteSuccess', { count: deleted });
+    showToast(tr('deleteSuccess', { count: deleted }), 'success');
   } catch (error) {
     console.error('删除失败:', error);
-    alert(tr('deleteFailed'));
+    await log.error('manualDeleteFailed', { error: String(error) });
+    showToast(tr('deleteFailed'), 'error');
   } finally {
     isLoading.value = false;
   }
@@ -199,7 +271,7 @@ async function handleAddRule() {
     newRuleValue.value = '';
     await loadRules();
   } catch (error: any) {
-    alert(error.message || 'Failed to add rule');
+    showToast(error.message || 'Failed to add rule', 'error');
   }
 }
 
@@ -292,6 +364,8 @@ onMounted(async () => {
   currentLang.value = lang;
   setCurrentLanguage(lang);
   
+  // 自动加载最近历史记录
+  loadRecentHistory();
   loadRules();
   // 初始加载日志
   loadLogs();
@@ -356,6 +430,22 @@ onUnmounted(() => {
         <button class="btn-primary" @click="handleSearch" :disabled="isLoading">
           {{ tr('searchBtn') }}
         </button>
+      </div>
+
+      <!-- 快捷清理面板 -->
+      <div class="quick-clean-panel">
+        <span class="quick-clean-title">{{ tr('quickClean') }}</span>
+        <div class="quick-clean-buttons">
+          <button class="btn-quick" @click="handleQuickClean(1)" :disabled="isQuickCleaning">
+            {{ tr('cleanLastHour') }}
+          </button>
+          <button class="btn-quick" @click="handleQuickClean(3)" :disabled="isQuickCleaning">
+            {{ tr('cleanLast3Hours') }}
+          </button>
+          <button class="btn-quick" @click="handleQuickClean(24)" :disabled="isQuickCleaning">
+            {{ tr('cleanLastDay') }}
+          </button>
+        </div>
       </div>
 
       <!-- 操作栏 -->
@@ -496,6 +586,14 @@ onUnmounted(() => {
         </li>
       </ul>
     </div>
+
+    <!-- Toast 通知 -->
+    <Transition name="toast">
+      <div v-if="toastVisible" :class="['toast', toastType]">
+        <span class="toast-icon">{{ toastType === 'success' ? '✅' : '❌' }}</span>
+        <span class="toast-message">{{ toastMessage }}</span>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -574,6 +672,54 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
+}
+
+/* 快捷清理面板 */
+.quick-clean-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #fff7ed, #fef3c7);
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+}
+
+.quick-clean-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400e;
+  white-space: nowrap;
+}
+
+.quick-clean-buttons {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.btn-quick {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: white;
+  transition: all 0.2s;
+}
+
+.btn-quick:hover:not(:disabled) {
+  transform: scale(1.03);
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+}
+
+.btn-quick:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .search-box input {
@@ -942,5 +1088,75 @@ onUnmounted(() => {
   padding: 30px;
   color: #9ca3af;
   font-size: 13px;
+}
+
+/* Toast 通知样式 */
+.toast {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast.success {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.toast.error {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.toast-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  white-space: nowrap;
+}
+
+/* Toast 过渡动画 */
+.toast-enter-active {
+  animation: toastIn 0.3s ease;
+}
+
+.toast-leave-active {
+  animation: toastOut 0.3s ease;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
 }
 </style>

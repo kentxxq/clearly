@@ -88,3 +88,28 @@ export async function deleteHistoryByKeyword(keyword: string): Promise<number> {
 
     return deleteHistoryByUrls(matchedUrls);
 }
+
+// 获取最近的历史记录（用于默认展示）
+export async function getRecentHistory(maxResults: number = 200): Promise<HistoryItem[]> {
+    return searchHistory('', maxResults);
+}
+
+// 按时间范围删除历史记录
+// startTime: 起始时间戳（毫秒），删除从 startTime 到当前时间的所有记录
+export async function deleteHistoryByTimeRange(startTime: number): Promise<number> {
+    // 先查询该时间范围内有多少条记录，用于返回计数
+    const results = await browser.history.search({
+        text: '',
+        startTime,
+        maxResults: 10000,
+    });
+    const count = results.length;
+
+    // 使用 deleteRange API 批量删除
+    await browser.history.deleteRange({
+        startTime,
+        endTime: Date.now(),
+    });
+
+    return count;
+}
