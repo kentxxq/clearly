@@ -8,16 +8,22 @@ vars:
 tasks:
   publish:
     cmds:
+      - echo "🚀 开始发布流程..."
       - task: zip-chrome
       - task: zip-edge
+      - echo "✅ 所有扩展包已准备就绪！"
     silent: true
 
   zip-chrome:
     cmds:
+      - echo "📦 正在打包 Chrome 扩展..."
       - pnpm zip -b chrome
+      - echo "✨ Chrome 扩展打包成功。"
     silent: true
 
   zip-edge:
     cmds:
+      - echo "📦 正在打包 Edge 扩展..."
       - pnpm zip -b edge
+      - echo "✨ Edge 扩展打包成功。"
     silent: true
