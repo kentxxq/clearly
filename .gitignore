@@ -1,4 +1,9 @@
 dist
+.env*
+*.local
+auth.*
+secret.*
+credentials.*
 
 # Logs
 logs

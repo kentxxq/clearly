@@ -2,28 +2,40 @@
 
 version: '3'
 
-vars:
-  GREETING: Hello, world!
-
 tasks:
-  publish:
+  build:
+    desc: 清理 + 打包所有平台（Chrome、Edge）
     cmds:
-      - echo "🚀 开始发布流程..."
-      - task: zip-chrome
-      - task: zip-edge
-      - echo "✅ 所有扩展包已准备就绪！"
-    silent: true
-
-  zip-chrome:
-    cmds:
+      - task: _clean
       - echo "📦 正在打包 Chrome 扩展..."
-      - pnpm zip -b chrome
-      - echo "✨ Chrome 扩展打包成功。"
-    silent: true
-
-  zip-edge:
-    cmds:
+      - pnpm zip
       - echo "📦 正在打包 Edge 扩展..."
       - pnpm zip -b edge
-      - echo "✨ Edge 扩展打包成功。"
+      - echo "✅ 打包完成！"
+    silent: true
+
+  publish:
+    desc: 清理 + 打包 + 发布到 Chrome 和 Edge 商店
+    cmds:
+      - echo "🚀 开始发布流程..."
+      - task: build
+      - task: _submit
+      - echo "✅ 发布完成！"
+    silent: true
+
+  # ---- 内部任务，不会出现在 task --list 中 ----
+
+  _clean:
+    internal: true
+    cmds:
+      - echo "🧹 清理 dist 目录..."
+      - rm -rf dist
+    silent: true
+
+  _submit:
+    internal: true
+    cmds:
+      - pnpm wxt submit
+        --chrome-zip dist/clearly-*-chrome.zip
+        --edge-zip dist/clearly-*-edge.zip
     silent: true

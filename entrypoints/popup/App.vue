@@ -497,7 +497,7 @@ onUnmounted(() => {
     <!-- 自动清理设置面板 -->
     <div v-if="activeTab === 'settings'" class="panel">
       <p class="settings-desc">
-        {{ tr('settingsDesc') }}
+        {{ tr('settingsDescV2') }}
       </p>
 
       <!-- 添加规则表单 -->

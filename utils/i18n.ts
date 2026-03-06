@@ -250,6 +250,46 @@ export const translations = {
         en: 'Running initial clean after install',
     },
 
+    // 实时监听日志消息
+    logRealtimeHit: {
+        zh: '实时拦截：规则 "{value}" 命中，已删除访问记录',
+        en: 'Realtime intercept: rule "{value}" matched, visit deleted',
+    },
+    logRealtimeUrl: {
+        zh: '被拦截 URL: {url}',
+        en: 'Intercepted URL: {url}',
+    },
+
+    // 右键菜单相关
+    contextMenuAddDomain: {
+        zh: 'Clearly：不再记录当前网站历史',
+        en: 'Clearly: Stop recording history for this site',
+    },
+    logContextMenuAdded: {
+        zh: '通过右键菜单添加了域名规则',
+        en: 'Added domain rule via context menu',
+    },
+    logContextMenuDomain: {
+        zh: '域名: {domain}',
+        en: 'Domain: {domain}',
+    },
+    logContextMenuExists: {
+        zh: '右键菜单：域名 "{domain}" 的规则已存在',
+        en: 'Context menu: rule for "{domain}" already exists',
+    },
+
+    // 下载清理相关
+    logDownloadClean: {
+        zh: '清理了 {count} 条匹配的下载记录',
+        en: 'Cleaned {count} matching download records',
+    },
+
+    // 规则设置描述更新
+    settingsDescV2: {
+        zh: '添加域名或关键词规则，插件将实时拦截并自动清理匹配的历史记录和下载记录。',
+        en: 'Add domain or keyword rules, the extension will intercept in real-time and auto-clean matching history and downloads.',
+    },
+
     // 语言切换
     switchLanguage: {
         zh: 'EN',

@@ -113,3 +113,63 @@ export async function deleteHistoryByTimeRange(startTime: number): Promise<numbe
 
     return count;
 }
+
+// 根据域名清理匹配的下载记录（仅从下载列表中抹除，不删除文件）
+export async function eraseDownloadsByDomain(domain: string): Promise<number> {
+    try {
+        const downloads = await browser.downloads.search({});
+        let erasedCount = 0;
+        for (const item of downloads) {
+            try {
+                const url = new URL(item.url);
+                if (isSubdomainMatch(url.hostname, domain)) {
+                    await browser.downloads.erase({ id: item.id });
+                    erasedCount++;
+                }
+            } catch {
+                // URL 解析失败则跳过
+            }
+        }
+        return erasedCount;
+    } catch (e) {
+        console.error('[Clearly] 清理下载记录失败:', e);
+        return 0;
+    }
+}
+
+// 根据关键词清理匹配的下载记录（仅从下载列表中抹除，不删除文件）
+export async function eraseDownloadsByKeyword(keyword: string): Promise<number> {
+    try {
+        const downloads = await browser.downloads.search({});
+        let erasedCount = 0;
+        const kw = keyword.toLowerCase();
+        for (const item of downloads) {
+            const urlMatch = item.url.toLowerCase().includes(kw);
+            const filenameMatch = (item.filename || '').toLowerCase().includes(kw);
+            if (urlMatch || filenameMatch) {
+                await browser.downloads.erase({ id: item.id });
+                erasedCount++;
+            }
+        }
+        return erasedCount;
+    } catch (e) {
+        console.error('[Clearly] 清理下载记录失败:', e);
+        return 0;
+    }
+}
+
+// 检查单个 URL 是否匹配某个域名规则
+export function urlMatchesDomain(url: string, domain: string): boolean {
+    try {
+        const parsed = new URL(url);
+        return isSubdomainMatch(parsed.hostname, domain);
+    } catch {
+        return url.toLowerCase().includes(domain.toLowerCase());
+    }
+}
+
+// 检查单个 URL/标题是否匹配关键词规则
+export function urlMatchesKeyword(url: string, title: string, keyword: string): boolean {
+    const kw = keyword.toLowerCase();
+    return url.toLowerCase().includes(kw) || title.toLowerCase().includes(kw);
+}
