@@ -306,7 +306,7 @@ let currentLanguage: Language = 'zh';
 // 获取保存的语言设置
 export async function getStoredLanguage(): Promise<Language> {
     try {
-        const result = await browser.storage.local.get(LANGUAGE_STORAGE_KEY);
+        const result = await browser.storage.sync.get(LANGUAGE_STORAGE_KEY);
         const lang = result[LANGUAGE_STORAGE_KEY];
         if (lang === 'zh' || lang === 'en') {
             currentLanguage = lang;
@@ -321,7 +321,7 @@ export async function getStoredLanguage(): Promise<Language> {
 // 保存语言设置
 export async function setStoredLanguage(lang: Language): Promise<void> {
     currentLanguage = lang;
-    await browser.storage.local.set({ [LANGUAGE_STORAGE_KEY]: lang });
+    await browser.storage.sync.set({ [LANGUAGE_STORAGE_KEY]: lang });
 }
 
 // 获取当前语言

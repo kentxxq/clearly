@@ -10,7 +10,7 @@ export interface CleanRule {
 }
 
 // 存储键定义
-const RULES_KEY = 'local:autoCleanRules';
+const RULES_KEY = 'sync:autoCleanRules';
 
 // 获取所有自动清理规则
 export async function getAutoCleanRules(): Promise<CleanRule[]> {

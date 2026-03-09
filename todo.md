@@ -1,0 +1,2 @@
+- 首次安装后的引导
+- 扩大清理范围（浏览数据清理）：目前主要是清理 history 和 downloads。其实很多人还需要清理 Cookies、Cache（缓存）、Local Storage 等。你可以使用 chrome.browsingData API 将其升级为一个全方位的“隐私清理器”。
