@@ -1,25 +1,35 @@
+Clearly - History Cleaner
+
 Clearly is a robust and user-friendly browser extension dedicated to maintaining your online privacy and keeping your browsing history tidy. 
 
-It empowers you with sophisticated search capabilities for precise manual history management, while also featuring a powerful automation engine. 
+Key Features:
+- 🚀 Real-time Monitoring: Instantly checks and deletes matching history records the moment they are added.
+- ⏱️ Automatic Scheduled Cleaning: Runs in the background to automatically clean your history and downloads.
+- 🖱️ Context Menu Shortcut: Easily add the current website's domain to your cleaning rules with a simple right-click.
+- 📅 Time Range Cleaning: Quickly clear your browsing history within a specific time frame.
+- 🎯 Custom Rules: Effortlessly create rules using specific domains or keywords to automatically remove unwanted records.
+- 🔔 Instant Notifications: Provides instant feedback with global Toast notifications after cleaning operations.
+- 🌍 Multi-language Support: Fully available in both English and Chinese.
 
-You can effortlessly create custom rules to automatically remove history records based on specific domains or keywords. 
+With our powerful automation engine and a detailed activity log for complete transparency, Clearly ensures your browsing data is handled exactly the way you want it. We are committed to continuous improvement to enhance your experience.
 
-With a built-in scheduler that initiates cleaning every minute and a detailed activity log for transparency, Clearly ensures your browsing data is handled exactly the way you want it. 
-
-We are committed to continuous improvement and will regularly release updates with new features and optimizations to enhance your experience.
-
-Experience a cleaner, faster, and more private web with Clearly.
+Experience a cleaner, faster, and more private web with Clearly!
 
 ---
 
-Clearly 是一款功能强大且易于使用的浏览器扩展，致力于保护您的在线隐私并保持浏览历史整洁。
+Clearly 历史记录清理器
 
-它为您提供高级搜索功能，方便进行精确的历史记录手动管理，同时还配备了强大的自动化引擎。
+Clearly 是一款功能强大且易于使用的浏览器扩展，致力于保护您的在线隐私并保持浏览历史的清爽整洁。
 
-您可以轻松创建自定义规则，根据特定的域名或关键字自动删除历史记录。
+✨ 核心功能：
+- 🚀 实时监听秒删：新增访问记录时立即检查规则，一旦命中立刻删除。
+- ⏱️ 自动定时清理：后台定时巡检，自动为您清理历史记录和下载记录。
+- 🖱️ 右键快捷添加：在浏览任意页面时，只需右键点击即可将当前域名快速加入清理规则。
+- 📅 按时间范围清理：支持快速清理指定时间段内的历史记录，方便灵活。
+- 🎯 多维度匹配规则：您可以轻松创建自定义规则，支持按特定的域名或关键字自动拦截和删除记录。
+- 🔔 全局即时通知：清理操作完成后提供即时 Toast 通知反馈，让您随时掌握状态。
+- 🌍 多语言支持：全面支持中文与英文界面。
 
-借助内置的调度程序（每分钟执行一次清理）和透明的详细活动日志，Clearly 确保您的浏览记录完全按照您期望的方式进行处理。
+借助强大的自动化引擎和透明的详细活动日志，Clearly 确保您的浏览记录完全按照您期望的方式进行处理。我们致力于持续迭代和优化，不断改进您的使用体验。
 
-我们致力于持续迭代和优化，将定期发布更新以带来更多实用功能，不断改进您的使用体验。
-
-使用 Clearly，体验更整洁、更快速、更私密的网络环境。
+使用 Clearly，让您的网络环境更整洁、更快速、更私密！
