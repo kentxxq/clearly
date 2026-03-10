@@ -2,7 +2,7 @@
   "name": "clearly",
   "description": "Keep your browsing history clean with search filtering and automatic scheduled cleaning",
   "private": false,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
   "scripts": {
     "dev": "wxt -b edge",
